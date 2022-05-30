@@ -10,4 +10,3 @@ for filename in directory:
     command = ".\\main " + directory_input + filename + " " + directory_output + filename
     print(command)
     os.system(command)
-
