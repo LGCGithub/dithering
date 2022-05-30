@@ -16,12 +16,14 @@ float nearest_pallete_color(float c, int bpp){
     float next = gap;
     float gray = 0.0;
 
-    for(int i = 0; i < pow - 1; i++){
+    for(int i = 0; i < pow; i++){
         if(atual <= c && c <= next) return gray;
         atual += gap;
         next += gap;
         gray += gray_gap;
     }
+    
+    return gray;
 }
 
 unsigned short bitwise_xor(unsigned short a, unsigned short b){
