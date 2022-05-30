@@ -43,7 +43,7 @@ Imagem* dither(Imagem* input){
     if(KERNEL_SIZE == 4) {
         for(int y = 0; y < input->altura; y++){
             for(int x = 0; x < input->largura; x++){
-                output->dados[0][y][x] = nearest_pallete_color(cinza->dados[0][y][x] + 0.5 * kernel4x4[y % 2][x % 2]);
+                output->dados[0][y][x] = nearest_pallete_color(cinza->dados[0][y][x] + 0.25 * kernel4x4[y % 4][x % 4]);
             }
         }
     }
