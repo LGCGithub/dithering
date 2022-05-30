@@ -23,7 +23,8 @@ float nearest_pallete_color(float c, int bpp){
         gray += gray_gap;
     }
     
-    return gray;
+    if(c <= 0.0) return 0.0;
+    if(c >= 1.0) return 1.0;
 }
 
 unsigned short bitwise_xor(unsigned short a, unsigned short b){
