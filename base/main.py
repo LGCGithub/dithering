@@ -8,8 +8,8 @@ def dither(img):
     return img
 
 
-directory_input = "base\\input\\"
-directory_output = "base\\output\\"
+directory_input = "input\\"
+directory_output = "output\\"
 
 directory = os.listdir(directory_input)
 
