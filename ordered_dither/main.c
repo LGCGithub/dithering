@@ -49,11 +49,7 @@ unsigned int bit_reverse(unsigned int a){
 }
 
 Imagem* dither(Imagem* input, int width, int bpp){
-    Imagem* output = criaImagem(input->largura, input->altura, 1);
-    Imagem* cinza = criaImagem(input->largura, input->altura, 1); // Conversão para cinza, 8bpp
-    if(input->n_canais == 3){
-        RGBParaCinza(input, cinza);
-    }
+    Imagem* output = criaImagem(input->largura, input->altura, 3);
 
     float** kernel;
     if(width == 1) {
@@ -76,13 +72,13 @@ Imagem* dither(Imagem* input, int width, int bpp){
     for(int i = 0; i < bpp; i++) pow *= 2;
 
     float r = 1.0 / pow;
-
-    for(int y = 0; y < input->altura; y++){
-        for(int x = 0; x < input->largura; x++){
-            output->dados[0][y][x] = nearest_pallete_color(cinza->dados[0][y][x] + r * (kernel[y % width][x % width] - 0.5), bpp);
+    for(int c = 0; c < 3; c++){
+        for(int y = 0; y < input->altura; y++){
+            for(int x = 0; x < input->largura; x++){
+                output->dados[c][y][x] = nearest_pallete_color(input->dados[c][y][x] + r * (kernel[y % width][x % width] - 0.5), bpp);
+            }
         }
     }
-
     return output;
 }
 
