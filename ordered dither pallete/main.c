@@ -47,6 +47,109 @@ Pallete* create_ega_pallete(){
     return pallete;
 }
 
+Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
+    Pallete* pallete = (Pallete*)malloc(sizeof(Pallete));
+    pallete->array = (Cor*)malloc(sizeof(Cor) * k);
+    pallete->size = k;
+
+    // Inicia os valores aleatorios
+    for(int i = 0; i < k; i++){
+
+        float r, g, b;
+        r = rand() / (float)RAND_MAX;
+        g = rand() / (float)RAND_MAX;
+        b = rand() / (float)RAND_MAX;
+
+        pallete->array[i] = criaCor(r, g, b);
+    }
+
+    Imagem* buffer = criaImagem(img->largura, img->altura, 1); // Buffer de id's
+
+    Pallete* new_pallete = (Pallete*)malloc(sizeof(Pallete));
+    new_pallete->array = (Cor*)malloc(sizeof(Cor) * k);
+    new_pallete->size = k;
+
+
+    for(int inter = 0; inter < interacoes; inter++){
+        for(int y = 0; y < img->altura; y++){
+            for(int x = 0; x < img->largura; x++){
+                float r1, g1, b1;
+                r1 = img->dados[0][y][x];
+                g1 = img->dados[1][y][x];
+                b1 = img->dados[2][y][x];
+
+                float min_dist = 1000.0;
+                // Calcula a cor da paleta mais próxima
+                for(int i = 0; i < k; i++){
+                    float r2, g2, b2;
+                    r2 = pallete->array[i].canais[0];
+                    g2 = pallete->array[i].canais[1];
+                    b2 = pallete->array[i].canais[2];
+
+                    float dist = (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2); // distancia RGB
+
+                    if(dist < min_dist){
+                        buffer->dados[0][y][x] = i;
+                        min_dist = dist;
+                    }
+                }
+            }
+        }
+
+        //for(int y = 0; y < img->altura; y++){
+        //    for(int x = 0; x < img->largura; x++){
+        //        printf("%lf ", buffer->dados[0][y][x]);
+        //    }
+        //    printf("\n");
+        //}
+
+        
+        // Paleta atualizada
+    
+        for(int i = 0; i < k; i++){
+            float r, g, b;
+            r = 0;
+            g = 0;
+            b = 0;
+
+            new_pallete->array[i] = criaCor(r, g, b);
+        }
+
+        int* aux = (int*)malloc(sizeof(int) * k);
+        for(int i = 0; i < k; i++) aux[i] = 0;
+
+        for(int y = 0; y < img->altura; y++){
+            for(int x = 0; x < img->largura; x++){
+                int index = buffer->dados[0][y][x];
+
+                new_pallete->array[index].canais[0] += img->dados[0][y][x];
+                new_pallete->array[index].canais[1] += img->dados[1][y][x];
+                new_pallete->array[index].canais[2] += img->dados[2][y][x];
+
+                aux[index]++;
+            }
+        }
+
+        for(int i = 0; i < k; i++) {
+            new_pallete->array[i].canais[0] /= aux[i];
+            new_pallete->array[i].canais[1] /= aux[i];
+            new_pallete->array[i].canais[2] /= aux[i];
+        }
+
+
+        // atualizar paleta
+        for(int i = 0; i < k; i++){
+            pallete->array[i].canais[0] = new_pallete->array[i].canais[0];
+            pallete->array[i].canais[1] = new_pallete->array[i].canais[1];
+            pallete->array[i].canais[2] = new_pallete->array[i].canais[2];
+        }
+
+    }
+
+
+    return pallete;
+}
+
 // Função auxiliar que encontra a cor mais próxima, 
 Cor nearest_pallete_color(float r1, float g1, float b1, Pallete* pallete){
     float min_dist = 1000.0;
@@ -144,6 +247,9 @@ int main(int argc, char* argv[]){
     int width = atoi(argv[3]); // tamanho do kernel
     int mode = atoi(argv[4]); // modo de dither
     int size = atoi(argv[5]); // tamanho da paleta
+    int inter;
+
+    if(mode == 3) inter = atoi(argv[6]);
 
     Imagem* entrada = abreImagem(entrada_arquivo, 3); // Abre imagem
 
@@ -151,6 +257,7 @@ int main(int argc, char* argv[]){
 
     if(mode == 1) pallete = create_ega_pallete(); // 64 cores, fixa
     if(mode == 2) pallete = create_random_pallete(entrada, size);
+    if(mode == 3) pallete = create_k_means_pallete(entrada, size, 10);
 
     Imagem* dithered = dither(entrada, width, pallete); // Processa imagem
     salvaImagem(dithered, saida_arquivo); // Salva imagem
