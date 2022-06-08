@@ -247,7 +247,7 @@ int main(int argc, char* argv[]){
     int width = atoi(argv[3]); // tamanho do kernel
     int mode = atoi(argv[4]); // modo de dither
     int size = atoi(argv[5]); // tamanho da paleta
-    int inter;
+    int inter; // numero de interações
 
     if(mode == 3) inter = atoi(argv[6]);
 
@@ -257,7 +257,7 @@ int main(int argc, char* argv[]){
 
     if(mode == 1) pallete = create_ega_pallete(); // 64 cores, fixa
     if(mode == 2) pallete = create_random_pallete(entrada, size);
-    if(mode == 3) pallete = create_k_means_pallete(entrada, size, 10);
+    if(mode == 3) pallete = create_k_means_pallete(entrada, size, inter);
 
     Imagem* dithered = dither(entrada, width, pallete); // Processa imagem
     salvaImagem(dithered, saida_arquivo); // Salva imagem
