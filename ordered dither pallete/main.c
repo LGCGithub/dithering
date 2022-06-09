@@ -69,6 +69,8 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
     new_pallete->array = (Cor*)malloc(sizeof(Cor) * k);
     new_pallete->size = k;
 
+    int* aux = (int*)malloc(sizeof(int) * k); 
+
 
     for(int inter = 0; inter < interacoes; inter++){
         for(int y = 0; y < img->altura; y++){
@@ -108,14 +110,13 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
     
         for(int i = 0; i < k; i++){
             float r, g, b;
-            r = 0;
-            g = 0;
-            b = 0;
+            r = pallete->array[i].canais[0];
+            g = pallete->array[i].canais[1];
+            b = pallete->array[i].canais[2];
 
             new_pallete->array[i] = criaCor(r, g, b);
         }
 
-        int* aux = (int*)malloc(sizeof(int) * k);
         for(int i = 0; i < k; i++) aux[i] = 0;
 
         for(int y = 0; y < img->altura; y++){
@@ -131,9 +132,10 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
         }
 
         for(int i = 0; i < k; i++) {
-            new_pallete->array[i].canais[0] /= aux[i];
-            new_pallete->array[i].canais[1] /= aux[i];
-            new_pallete->array[i].canais[2] /= aux[i];
+            // Supoe que a color aleatória aparece pelo menos uma vez na imagem
+            new_pallete->array[i].canais[0] /= aux[i] + 1;
+            new_pallete->array[i].canais[1] /= aux[i] + 1;
+            new_pallete->array[i].canais[2] /= aux[i] + 1;
         }
 
 
@@ -145,7 +147,6 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
         }
 
     }
-
 
     return pallete;
 }
@@ -213,20 +214,26 @@ Imagem* dither(Imagem* input, int width, Pallete* pallete){
     }
 
     // Task: Descobrir como calcular essa valor para paletas aleatorias
-    float r = 0.25; 
-    // noise magnitude
+    float r[3]= {0.0, 0.0, 0.0};
+    // noise magnitude, color spread
     // higher => less color banding, noise more evident
     // lower => more color banding, noise less evident
     // middle => ideal
 
+    // Calcula a distancia média entre as cores, em 1d, para cada canal
+    for(int k = 0; k < pallete->size; k++){
+        for(int i = 0; i < 3; i++) r[i] += pallete->array[k].canais[i] / (pallete->size * 2);
+    }
+
     for(int y = 0; y < input->altura; y++){
         for(int x = 0; x < input->largura; x++){
-            float noise = r * (kernel[y % width][x % width] - 0.5);
-
+            float noise[3];
+            for(int i = 0; i < 3; i++)  noise[i] = r[i] * (kernel[y % width][x % width] - 0.5);
+            
             float r, g, b;
-            r = input->dados[0][y][x] + noise;
-            g = input->dados[1][y][x] + noise;
-            b = input->dados[2][y][x] + noise;
+            r = input->dados[0][y][x] + noise[0];
+            g = input->dados[1][y][x] + noise[1];
+            b = input->dados[2][y][x] + noise[2];
 
             Cor color = nearest_pallete_color(r, g, b, pallete);
 
