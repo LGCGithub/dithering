@@ -10,23 +10,178 @@ typedef struct pallete {
     int size;
 } Pallete;
 
+typedef struct node {
+    struct node* next;
+    struct node* prev;
+    Cor value;
+} Node;
+
+typedef struct lista
+{
+    Node* inicio;
+    Node* fim;
+    unsigned long int size;
+}Lista;
+
+// Função que retorna um unsigned long int aleatorio
+unsigned long int randLI(){
+    // 32 bits
+    unsigned long int num = 0;
+    unsigned long int pow = 1;
+
+    for(int i = 0; i < 32; i++){
+        num += pow * (rand() % 2);
+        pow *= 2;
+    }
+
+    return num;
+}
+
+// Checa se duas cores são iguais
+int coresIguais(Cor a, Cor b){
+    if(a.canais[0] == b.canais[0] && a.canais[1] == b.canais[1] && a.canais[2] == b.canais[2]) return 1;
+    return 0;
+}
+
+/* Arrange the N elements of ARRAY in random order.
+   Only effective if N is much smaller than RAND_MAX;
+   if this may not be the case, use a better random
+   number generator. */
+// Versão modificada, original feita por Ben Pfaff
+
+void shuffle(Cor *array, size_t n)
+{
+    if (n > 1) {
+        size_t i;
+        for (i = 0; i < n - 1; i++) {
+        size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+        Cor t = array[j];
+        array[j] = array[i];
+        array[i] = t;
+        }
+    }
+}
+
+Lista* create_list(){
+    Lista* new = (Lista*)malloc(sizeof(Lista));
+    new->inicio = NULL;
+    new->fim = NULL;
+    new->size = 0;
+    return new;
+}
+
+Cor pop(Lista* lista){
+    if(lista->inicio == NULL) {
+        return criaCor(-1.0, -1.0, -1.0);
+    }
+    else if(lista->inicio == lista->fim){
+        lista->size = 0;
+
+        Node* unico = lista->inicio;
+
+        lista->inicio = NULL;
+        lista->fim = NULL;
+
+        Cor value = unico->value;
+
+        free(unico);
+
+        return value;
+    } else {
+        lista->size--;
+
+        Node* fim = lista->fim;
+        Node* penultimo = fim->prev;
+        Cor value = fim->value;
+
+        lista->fim = penultimo;
+        penultimo->next = NULL;
+
+        free(fim);
+
+        return value;
+    }
+}
+
+void push(Lista* lista, Cor value){
+    Node* new = (Node*)malloc(sizeof(Node));
+    new->next = NULL;
+    new->prev = NULL;
+    new->value = value;
+
+    if(lista->inicio == NULL){
+        lista->inicio = new;
+        lista->fim = new;
+        lista->size = 1;
+    }
+    else if(lista->inicio == lista->fim){
+        new->prev = lista->inicio;
+        lista->inicio->next = new;
+        lista->fim = new;
+        lista->size = 2;
+    } else {
+        new->prev = lista->fim;
+        lista->fim->next = new;
+        lista->fim = new;
+        lista->size++;
+    }
+}
+
+
 Pallete* create_random_pallete(Imagem* img, int size){
     Pallete* pallete = (Pallete*)malloc(sizeof(Pallete));
     pallete->array = (Cor*)malloc(sizeof(Cor) * size);
-    pallete->size = size;
+    pallete->size = 0;
 
-    for(int i = 0; i < size; i++){
-        int x = rand() % img->largura;
-        int y = rand() % img->altura;
+    Lista* cores_unicas = create_list();
 
-        float r, g, b;
-        r = img->dados[0][y][x];
-        g = img->dados[1][y][x];
-        b = img->dados[2][y][x];
+    // Listar cores unicas
 
-        pallete->array[i] = criaCor(r, g, b);
+    for(int y = 0; y < img->altura; y++){
+        for(int x = 0; x < img->largura; x++){
+            Cor corAtual = criaCor(img->dados[0][y][x], img->dados[1][y][x], img->dados[2][y][x]);
+            int not_in_list = 1;
+            Node* atual = cores_unicas->inicio;
+
+            while(atual != NULL){
+                if(coresIguais(corAtual, atual->value)) {
+                    not_in_list = 0;
+                    break;
+                }
+                atual = atual->next;
+            } 
+
+            if(not_in_list) push(cores_unicas, corAtual);
+        }
     }
 
+    // Se a quantidade de cores unicas na imagem for menor que a quantidade máxima de cores da paleta, copia todas para a paleta
+    if(cores_unicas->size <= size){
+        Node* atual = cores_unicas->inicio;
+        for(int k = 0; k < cores_unicas->size; k++) {
+            pallete->array[k] = atual->value;
+            atual = atual->next;
+        }
+        pallete->size = cores_unicas->size;
+    } else {
+        Cor* cores_unicas_aux = (Cor*)malloc(sizeof(Cor) * cores_unicas->size);
+        
+        Node* atual = cores_unicas->inicio;
+        for(int i = 0; i < cores_unicas->size; i++){
+            cores_unicas_aux[i] = atual->value;
+            atual = atual->next;
+        }
+
+        // Embaralha o array para criar uma ordem de cores aleatorias
+        shuffle(cores_unicas_aux, cores_unicas->size);
+
+        for(int k = 0; k < size; k++){
+            pallete->array[k] = cores_unicas_aux[k];
+        }
+
+        pallete->size = size;
+    }
+        
     return pallete;
 }
 
@@ -53,24 +208,16 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
     pallete->size = k;
 
     // Inicia os valores aleatorios
-    for(int i = 0; i < k; i++){
-
-        float r, g, b;
-        r = rand() / (float)RAND_MAX;
-        g = rand() / (float)RAND_MAX;
-        b = rand() / (float)RAND_MAX;
-
-        pallete->array[i] = criaCor(r, g, b);
-    }
+    pallete = create_random_pallete(img, k);
+    k = pallete->size;
 
     Imagem* buffer = criaImagem(img->largura, img->altura, 1); // Buffer de id's
 
     Pallete* new_pallete = (Pallete*)malloc(sizeof(Pallete));
     new_pallete->array = (Cor*)malloc(sizeof(Cor) * k);
-    new_pallete->size = k;
+    new_pallete->size = pallete->size;
 
-    int* aux = (int*)malloc(sizeof(int) * k); 
-
+    int* cores_unicas = (int*)malloc(sizeof(int) * k); 
 
     for(int inter = 0; inter < interacoes; inter++){
         for(int y = 0; y < img->altura; y++){
@@ -109,15 +256,10 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
         // Paleta atualizada
     
         for(int i = 0; i < k; i++){
-            float r, g, b;
-            r = pallete->array[i].canais[0];
-            g = pallete->array[i].canais[1];
-            b = pallete->array[i].canais[2];
-
-            new_pallete->array[i] = criaCor(r, g, b);
+            new_pallete->array[i] = criaCor(0.0, 0.0, 0.0);
         }
 
-        for(int i = 0; i < k; i++) aux[i] = 0;
+        for(int i = 0; i < k; i++) cores_unicas[i] = 0;
 
         for(int y = 0; y < img->altura; y++){
             for(int x = 0; x < img->largura; x++){
@@ -127,15 +269,14 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
                 new_pallete->array[index].canais[1] += img->dados[1][y][x];
                 new_pallete->array[index].canais[2] += img->dados[2][y][x];
 
-                aux[index]++;
+                cores_unicas[index]++;
             }
         }
 
         for(int i = 0; i < k; i++) {
-            // Supoe que a color aleatória aparece pelo menos uma vez na imagem
-            new_pallete->array[i].canais[0] /= aux[i] + 1;
-            new_pallete->array[i].canais[1] /= aux[i] + 1;
-            new_pallete->array[i].canais[2] /= aux[i] + 1;
+            new_pallete->array[i].canais[0] /= cores_unicas[i];
+            new_pallete->array[i].canais[1] /= cores_unicas[i];
+            new_pallete->array[i].canais[2] /= cores_unicas[i];
         }
 
 
@@ -146,6 +287,10 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
             pallete->array[i].canais[2] = new_pallete->array[i].canais[2];
         }
 
+    }
+
+    for(int k = 0; k < pallete->size; k++){
+        printf("%f %f %f\n", pallete->array[k].canais[0], pallete->array[k].canais[1], pallete->array[k].canais[2]);
     }
 
     return pallete;
