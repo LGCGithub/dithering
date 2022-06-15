@@ -5,17 +5,25 @@
 #include <stdlib.h>
 #include <time.h>
 
+// Struct que guarda as informações relativa a uma paleta
+// O vetor de cores representa as cores da paleta, e o valor inteiro size o tamanho do vetor.
 typedef struct pallete {
     Cor* array;
     int size;
 } Pallete;
 
+// Nó de uma lista duplamente encadeada. 
+// Utilizo na hora de calcular quantas cores únicas existem na imagem, 
+// numa lista que funciona como uma espécie de "vetor com tamanho dinâmico"
+// Faço isso pois não sei quantas cores únicas existem na imagem, logo não posso alocar um valor fixo.
 typedef struct node {
     struct node* next;
     struct node* prev;
     Cor value;
 } Node;
 
+// Struct auxiliar que aponta para o inicio e fim de uma lista encadeada.
+// Também guarda o tamanho da lista.
 typedef struct lista
 {
     Node* inicio;
@@ -23,7 +31,9 @@ typedef struct lista
     unsigned long int size;
 }Lista;
 
-// Função que retorna um unsigned long int aleatorio
+// Função auxiliar que retorna um unsigned long int aleatorio
+// A função rand consegue gerar apenas valores até RAND_MAX, mas essa função consegue gerar valores até 2^32 - 1.
+// Eu ia utilizar ela pra calcular valores aleatorios melhores, mas acabei não usando.
 unsigned long int randLI(){
     // 32 bits
     unsigned long int num = 0;
@@ -37,7 +47,7 @@ unsigned long int randLI(){
     return num;
 }
 
-// Checa se duas cores são iguais
+// Checa se duas cores são iguais, retorna 1 se true e 0 se false
 int coresIguais(Cor a, Cor b){
     if(a.canais[0] == b.canais[0] && a.canais[1] == b.canais[1] && a.canais[2] == b.canais[2]) return 1;
     return 0;
@@ -48,7 +58,7 @@ int coresIguais(Cor a, Cor b){
    if this may not be the case, use a better random
    number generator. */
 // Versão modificada, original feita por Ben Pfaff
-
+// Função que embaralha um array. Utilizo para gerar um array "aleatorio" de cores.
 void shuffle(Cor *array, size_t n)
 {
     if (n > 1) {
@@ -62,6 +72,7 @@ void shuffle(Cor *array, size_t n)
     }
 }
 
+// Função que cria uma lista encadeada vazia.
 Lista* create_list(){
     Lista* new = (Lista*)malloc(sizeof(Lista));
     new->inicio = NULL;
@@ -70,6 +81,8 @@ Lista* create_list(){
     return new;
 }
 
+// Função que remove o ultimo elemento da lista encadeada e retorna o seu valor (cor).
+// Não utilizei essa função, mas fiz por completude.
 Cor pop(Lista* lista){
     if(lista->inicio == NULL) {
         return criaCor(-1.0, -1.0, -1.0);
@@ -103,6 +116,7 @@ Cor pop(Lista* lista){
     }
 }
 
+// Função que adiciona um elemento no final da lista encadeada. Utilizo para criar uma lista de cores únicas da imagem.
 void push(Lista* lista, Cor value){
     Node* new = (Node*)malloc(sizeof(Node));
     new->next = NULL;
@@ -127,35 +141,41 @@ void push(Lista* lista, Cor value){
     }
 }
 
-
+// Versão melhorada/alternativa. A paleta não é mais completamente aleatoria, mas sim é uma parte das cores que já existem na imagem.
+// Essa função é lenta.
 Pallete* create_random_pallete(Imagem* img, int size){
     Pallete* pallete = (Pallete*)malloc(sizeof(Pallete));
     pallete->array = (Cor*)malloc(sizeof(Cor) * size);
     pallete->size = 0;
 
+    // Lista de cores únicas na imagem.
     Lista* cores_unicas = create_list();
 
-    // Listar cores unicas
-
+    // Passa pela imagem, adicionando na lista toda cor que aparecer pela primeira vez.
     for(int y = 0; y < img->altura; y++){
         for(int x = 0; x < img->largura; x++){
             Cor corAtual = criaCor(img->dados[0][y][x], img->dados[1][y][x], img->dados[2][y][x]);
             int not_in_list = 1;
-            Node* atual = cores_unicas->inicio;
+            Node* atual = cores_unicas->inicio; // Inicio da lista encadeada.
 
+            // Varre a lista encadeada, buscando por uma cor igual.
+            // Se a cor já estiver na lista, pula para o próximo pixel.
             while(atual != NULL){
                 if(coresIguais(corAtual, atual->value)) {
-                    not_in_list = 0;
+                    not_in_list = 0; // Se encontrar uma cor igual/repetida, quebra o loop
                     break;
                 }
                 atual = atual->next;
             } 
 
+            // Se a cor não apareceu na lista, é a primeira vez que ela aparece na imagem.
+            // Ela é adicionada na lista de cores únicas.
             if(not_in_list) push(cores_unicas, corAtual);
         }
     }
 
-    // Se a quantidade de cores unicas na imagem for menor que a quantidade máxima de cores da paleta, copia todas para a paleta
+    // Caso o número de cores da imagem seja menor que o número de cores da paleta, trata essa caso.
+    // Se a quantidade de cores unicas na imagem for menor que a quantidade máxima de cores da paleta, copia todas para a paleta.
     if(cores_unicas->size <= size){
         Node* atual = cores_unicas->inicio;
         for(int k = 0; k < cores_unicas->size; k++) {
@@ -163,18 +183,23 @@ Pallete* create_random_pallete(Imagem* img, int size){
             atual = atual->next;
         }
         pallete->size = cores_unicas->size;
-    } else {
-        Cor* cores_unicas_aux = (Cor*)malloc(sizeof(Cor) * cores_unicas->size);
+    } else { // Caso contrário, adiciona uma parte das cores únicas na paleta.
+        Cor* cores_unicas_aux = (Cor*)malloc(sizeof(Cor) * cores_unicas->size); // Vetor auxiliar
         
+        // Para selecionar cores aleatorias, eu copio a lista de cores únicas para um vetor e embaralho ele.
+        // As primeiras cores são selecionadas para fazer parte da paleta.
+
+        // Copia a lista para um vetor
         Node* atual = cores_unicas->inicio;
         for(int i = 0; i < cores_unicas->size; i++){
             cores_unicas_aux[i] = atual->value;
             atual = atual->next;
         }
 
-        // Embaralha o array para criar uma ordem de cores aleatorias
+        // Embaralha o vetor para criar uma ordem de cores aleatorias
         shuffle(cores_unicas_aux, cores_unicas->size);
 
+        // Passa as primeiras cores para a paleta
         for(int k = 0; k < size; k++){
             pallete->array[k] = cores_unicas_aux[k];
         }
@@ -185,10 +210,15 @@ Pallete* create_random_pallete(Imagem* img, int size){
     return pallete;
 }
 
+// Cria uma paleta EGA com 64 cores.
 Pallete* create_ega_pallete(){
     Pallete* pallete = (Pallete*)malloc(sizeof(Pallete));
     pallete->array = (Cor*)malloc(sizeof(Cor) * 64);
     pallete->size = 64;
+
+    // A paleta EGA é basicamente todas as combinações de cores que 
+    // podem ser formadas com os valores 0.000, 0.333, 0.666, 1.000 para o R, G, e o B
+    // No total, existem 64 combinações possíveis
 
     int i = 0;
     for(int r = 0; r < 4; r++){
@@ -202,24 +232,33 @@ Pallete* create_ega_pallete(){
     return pallete;
 }
 
+// Cria uma paleta utilizando o método k-means para selecionar as cores.
 Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
     Pallete* pallete = (Pallete*)malloc(sizeof(Pallete));
     pallete->array = (Cor*)malloc(sizeof(Cor) * k);
     pallete->size = k;
 
-    // Inicia os valores aleatorios
+    // Inicia os valores aleatorios, utiliza a função já criada.
     pallete = create_random_pallete(img, k);
     k = pallete->size;
 
     Imagem* buffer = criaImagem(img->largura, img->altura, 1); // Buffer de id's
 
+    // Paleta auxiliar, temporaria, somente para calcular a nova paleta entre as interações.
     Pallete* new_pallete = (Pallete*)malloc(sizeof(Pallete));
     new_pallete->array = (Cor*)malloc(sizeof(Cor) * k);
     new_pallete->size = pallete->size;
 
+    // Vetor auxiliar que guarda quantas cores estão em cada cluster. Utilizo para fazer a média.
     int* cores_unicas = (int*)malloc(sizeof(int) * k); 
 
+    // Para cada interação:
+    // Associa um ID para cada pixel, que informa qual a cor da paleta mais próxima com ele.
+    // Soma todas as cores com o mesmo ID e divide pelo número de cores com o mesmo ID, criando uma nova paleta
+    // Copia a nova paleta para a paleta original.
     for(int inter = 0; inter < interacoes; inter++){
+
+        // Associa um ID para cada pixel, que informa qual a cor da paleta mais próxima com ele.
         for(int y = 0; y < img->altura; y++){
             for(int x = 0; x < img->largura; x++){
                 float r1, g1, b1;
@@ -245,22 +284,13 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
             }
         }
 
-        //for(int y = 0; y < img->altura; y++){
-        //    for(int x = 0; x < img->largura; x++){
-        //        printf("%lf ", buffer->dados[0][y][x]);
-        //    }
-        //    printf("\n");
-        //}
-
-        
-        // Paleta atualizada
-    
         for(int i = 0; i < k; i++){
             new_pallete->array[i] = criaCor(0.0, 0.0, 0.0);
         }
 
         for(int i = 0; i < k; i++) cores_unicas[i] = 0;
 
+        // Soma todas as cores com o mesmo ID e divide pelo número de cores com o mesmo ID, criando uma nova paleta
         for(int y = 0; y < img->altura; y++){
             for(int x = 0; x < img->largura; x++){
                 int index = buffer->dados[0][y][x];
@@ -280,7 +310,7 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
         }
 
 
-        // atualizar paleta
+        // Copia a nova paleta para a paleta original.
         for(int i = 0; i < k; i++){
             pallete->array[i].canais[0] = new_pallete->array[i].canais[0];
             pallete->array[i].canais[1] = new_pallete->array[i].canais[1];
@@ -289,14 +319,10 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
 
     }
 
-    for(int k = 0; k < pallete->size; k++){
-        printf("%f %f %f\n", pallete->array[k].canais[0], pallete->array[k].canais[1], pallete->array[k].canais[2]);
-    }
-
     return pallete;
 }
 
-// Função auxiliar que encontra a cor mais próxima, 
+// Função auxiliar que encontra a cor mais próxima, no espaço RGB. 
 Cor nearest_pallete_color(float r1, float g1, float b1, Pallete* pallete){
     float min_dist = 1000.0;
     Cor nearest_color;
@@ -318,10 +344,12 @@ Cor nearest_pallete_color(float r1, float g1, float b1, Pallete* pallete){
     return nearest_color;
 }
 
+// Bruxaria com bits para calcular o kernel.
 unsigned short bitwise_xor(unsigned short a, unsigned short b){
     return a ^ b;
 }
 
+// Bruxaria com bits para calcular o kernel.
 unsigned int bit_interleave(unsigned short a, unsigned short b){ // 
     unsigned int n = 0; // 16 bits, 8 + 8 bits
     for(int i = 0; i < 16; i++) {
@@ -334,14 +362,16 @@ static unsigned char lookup[16] = {
 0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
 0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf, };
 
-// bruxaria com bits
+// Bruxaria com bits para calcular o kernel.
 unsigned int bit_reverse(unsigned int a){
     return (lookup[a&0b1111] << 4) | lookup[a>>4];
 }
 
+// Função principal, que realiza o dithering em uma imagem de entrada.
 Imagem* dither(Imagem* input, int width, Pallete* pallete){
     Imagem* output = criaImagem(input->largura, input->altura, 3);
 
+    // Cria o kernel
     float** kernel;
     if(width == 1) {
         kernel = (float**)malloc(sizeof(float));
@@ -357,19 +387,17 @@ Imagem* dither(Imagem* input, int width, Pallete* pallete){
             }
         }
     }
-
-    // Task: Descobrir como calcular essa valor para paletas aleatorias
+    // Vetor que guarda o quão espalhado estão as cores no espaço RGB.
+    // Representa a "magnitude" do ruido que será adicionado na imagem.
     float r[3]= {0.0, 0.0, 0.0};
-    // noise magnitude, color spread
-    // higher => less color banding, noise more evident
-    // lower => more color banding, noise less evident
-    // middle => ideal
-
-    // Calcula a distancia média entre as cores, em 1d, para cada canal
+    
+    // Calcula a distancia média entre as cores, em 1d, para cada canal.
+    // A distancia média é o quanto um valor tem que mudar para cair no dominio de outra cor. 
     for(int k = 0; k < pallete->size; k++){
         for(int i = 0; i < 3; i++) r[i] += pallete->array[k].canais[i] / (pallete->size * 2);
     }
 
+    // Aplica o ruido na imagem e quantiza com base na paleta.
     for(int y = 0; y < input->altura; y++){
         for(int x = 0; x < input->largura; x++){
             float noise[3];
