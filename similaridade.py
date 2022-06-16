@@ -53,11 +53,17 @@ for filename in directory:
 
     correlacao_borrada = esp_borrada / (var_original_borrada * var_dithered_borrada)
 
+    # Recarrega as imagens no formato BGR
+    img_original = cv.imread(directory_input + filename) 
+    img_dithered = cv.imread(directory_output + filename)
 
-    # Mean squared error
-    msq = np.sum((img_original - img_dithered)**2)
-    msq_borrada = np.sum((img_original_borrada - img_dithered_borrada)**2)
+    # Borra as imagens no formato BGR
+    img_original_borrada = cv.GaussianBlur(img_original, ksize=(7, 7), sigmaX=0)
+    img_dithered_borrada = cv.GaussianBlur(img_dithered, ksize=(7, 7), sigmaX=0)
 
+    # Mean squared error, nos três canais
+    msq = np.sum((img_original - img_dithered)**2) / (h * w)
+    msq_borrada = np.sum((img_original_borrada - img_dithered_borrada)**2) / (h * w)
 
     print("Imagem: " + filename)
 
