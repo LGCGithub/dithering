@@ -290,10 +290,6 @@ Pallete* create_k_means_pallete(Imagem* img, int k, int interacoes){
 
     }
 
-    for(int k = 0; k < pallete->size; k++){
-        printf("%f %f %f\n", pallete->array[k].canais[0], pallete->array[k].canais[1], pallete->array[k].canais[2]);
-    }
-
     return pallete;
 }
 
@@ -329,24 +325,24 @@ Imagem* dither(Imagem* input,int width, Pallete* pallete){
             for (int i = 0; i<3;i++){
                 output->dados[i][y][x] = input->dados[i][y][x];
             }}}
-    for(int y = 0; y < input->altura-1; y++){
-        for(int x = 0; x < input->largura-1; x++){
+    for(int y = 0; y < input->altura; y++){
+        for(int x = 0; x < input->largura; x++){
             Cor cor_aux = nearest_pallete_color(output->dados[0][y][x],output->dados[1][y][x],output->dados[2][y][x],pallete);
             for (int i = 0; i<3;i++){
                 pixel_antigo[i] = output->dados[i][y][x];
                 output->dados[i][y][x] = cor_aux.canais[i];
                 quant_erro[i] = pixel_antigo[i] - output->dados[i][y][x];
-                output->dados[i][y][x+1] = output->dados[i][y][x+1] +  quant_erro[i] * 7 / 16;
-                output->dados[i][y+1][x-1] = output->dados[i][y+1][x-1] +  quant_erro[i] * 3 / 16;
-                output->dados[i][y+1][x] = output->dados[i][y+1][x] +  quant_erro[i] * 5 / 16;
-                output->dados[i][y+1][x+1] = output->dados[i][y+1][x+1] +  quant_erro[i] / 16;
+                output->dados[i][y][x+1] = output->dados[i][y][x+1] +  quant_erro[i] * 7.0 / 16.0;
+                output->dados[i][y+1][x-1] = output->dados[i][y+1][x-1] +  quant_erro[i] * 3.0 / 16.0;
+                output->dados[i][y+1][x] = output->dados[i][y+1][x] +  quant_erro[i] * 5.0 / 16.0;
+                output->dados[i][y+1][x+1] = output->dados[i][y+1][x+1] +  quant_erro[i] / 16.0;
             }
         }
     }
     
     return output;
 }
-void salvaPallete(Pallete* pallete,char* entrada){
+void salvaPallete(Pallete* pallete, char* arquivo){
     int largura = pow(pallete->size,0.5);
     int altura = largura;
     while (largura*altura < pallete->size) altura++;
@@ -379,27 +375,8 @@ void salvaPallete(Pallete* pallete,char* entrada){
             }
         }
     }
-    char *ultimo;
-    char *saida;
-	int init_size = strlen(entrada);
 
-	char *ptr = strtok(entrada, "\\");
-    char *primeiro = ptr;
-    while(ptr != NULL)
-	{
-        ultimo = ptr;
-		ptr = strtok(NULL, "\\");
-	}
-    strcat(strcpy(saida,"Paleta"), ultimo);
-    if (!strcmp(primeiro,"input")){
-        strcat(strcpy(primeiro,"paletas\\"),saida);
-        strcat(primeiro,saida);
-    }
-    else{
-        strcat(primeiro,"\\paletas\\");
-        strcat(primeiro,saida);
-    }
-    salvaImagem(imgPaleta,primeiro);
+    salvaImagem(imgPaleta, arquivo);
 }
 
 int main(int argc, char* argv[]){
@@ -407,12 +384,13 @@ int main(int argc, char* argv[]){
 
     char* entrada_arquivo = argv[1]; // nome do arquivo de entrada
     char* saida_arquivo = argv[2]; // nome do arquivo de saida
-    int width = atoi(argv[3]); // tamanho do kernel
-    int mode = atoi(argv[4]); // modo de dither
-    int size = atoi(argv[5]); // tamanho da paleta
+    char* saida_paleta = argv[3];
+    int width = atoi(argv[4]); // tamanho do kernel
+    int mode = atoi(argv[5]); // modo de dither
+    int size = atoi(argv[6]); // tamanho da paleta
     int inter; // numero de interações
 
-    if(mode == 3) inter = atoi(argv[6]);
+    if(mode == 3) inter = atoi(argv[7]);
 
     Imagem* entrada = abreImagem(entrada_arquivo, 3); // Abre imagem
 
@@ -422,7 +400,7 @@ int main(int argc, char* argv[]){
     if(mode == 2) pallete = create_random_pallete(entrada, size);
     if(mode == 3) pallete = create_k_means_pallete(entrada, size, inter);
 
-    salvaPallete(pallete,entrada_arquivo);
+    salvaPallete(pallete, saida_paleta);
     Imagem* dithered = dither(entrada, width, pallete); // Processa imagem
     salvaImagem(dithered, saida_arquivo); // Salva imagem
 

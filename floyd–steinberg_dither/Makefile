@@ -1,2 +1,2 @@
 all:
-	gcc -o main main.c imagem.c cores.c
+	gcc -o main main.c imagem.c cores.c -lm
