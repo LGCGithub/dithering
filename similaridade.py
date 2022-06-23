@@ -3,6 +3,7 @@
 import os
 import cv2 as cv
 import numpy as np
+from skimage.metrics import structural_similarity as ssim
 
 barra = "" # tenho que testar em linux pra ver se funciona como eu espero que funcione
 
@@ -42,7 +43,7 @@ for filename in directory:
     img_original_borrada = cv.GaussianBlur(img_original, ksize=(7, 7), sigmaX=0)
     img_dithered_borrada = cv.GaussianBlur(img_dithered, ksize=(7, 7), sigmaX=0)
 
-    # Recalcula correlação
+    # Calcula correlação
     media_original_borrada = np.sum(img_original_borrada) / (h * w)
     media_dithered_borrada = np.sum(img_dithered_borrada) / (h * w)
 
@@ -52,6 +53,10 @@ for filename in directory:
     var_dithered_borrada = np.sum((img_dithered_borrada - media_dithered_borrada)**2) ** (0.5)
 
     correlacao_borrada = esp_borrada / (var_original_borrada * var_dithered_borrada)
+
+    # Calcula SSIM
+    ssim_original = ssim(img_original, img_dithered)
+    ssim_borrada = ssim(img_original_borrada, img_dithered_borrada)
 
     # Recarrega as imagens no formato BGR
     img_original = cv.imread(directory_input + filename) 
@@ -71,8 +76,15 @@ for filename in directory:
     print("MSQ borrando: {:.4f}".format(msq_borrada), end="\n")
 
     print("Correlacao sem borrar: {:.4f}".format(correlacao), end="; ")
-    print("Correlacao borrando: {:.4f}".format(correlacao_borrada), end="\n\n")
+    print("Correlacao borrando: {:.4f}".format(correlacao_borrada), end="\n")
 
+    print("SSIM sem borrar: {:.4f}".format(ssim_original), end="; ")
+    print("SSIM borrando: {:.4f}".format(ssim_borrada), end="\n\n")
+
+    #cv.imshow("original", img_original)
+    #cv.imshow("borrada", img_original_borrada)
+    #cv.imshow("dithered borrada", img_dithered_borrada)
+    #cv.waitKey(0)
     
     
 
