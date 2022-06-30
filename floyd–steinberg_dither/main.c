@@ -317,6 +317,10 @@ Cor nearest_pallete_color(float r1, float g1, float b1, Pallete* pallete){
 
 Imagem* dither(Imagem* input,int width, Pallete* pallete){
     Imagem* output = criaImagem(input->largura, input->altura, 3);
+    Imagem* erro = criaImagem(input->largura, input->altura, 3);
+    Imagem* erro1pb = criaImagem(input->largura, input->altura, 1);
+    Imagem* erro2pb = criaImagem(input->largura, input->altura, 1);
+    Imagem* erro3pb = criaImagem(input->largura, input->altura, 1);
     float pixel_antigo[3];
     float quant_erro[3];
     //memcpy(input,&output,sizeof input);
@@ -332,14 +336,16 @@ Imagem* dither(Imagem* input,int width, Pallete* pallete){
                 pixel_antigo[i] = output->dados[i][y][x];
                 output->dados[i][y][x] = cor_aux.canais[i];
                 quant_erro[i] = pixel_antigo[i] - output->dados[i][y][x];
-                output->dados[i][y][x+1] = output->dados[i][y][x+1] +  quant_erro[i] * 7.0 / 16.0;
-                output->dados[i][y+1][x-1] = output->dados[i][y+1][x-1] +  quant_erro[i] * 3.0 / 16.0;
-                output->dados[i][y+1][x] = output->dados[i][y+1][x] +  quant_erro[i] * 5.0 / 16.0;
-                output->dados[i][y+1][x+1] = output->dados[i][y+1][x+1] +  quant_erro[i] / 16.0;
+                if (x+1 < input->largura)
+                    output->dados[i][y][x+1] = output->dados[i][y][x+1] +  quant_erro[i] * 7.0 / 16.0;
+                if (y+1 < input->altura){
+                    output->dados[i][y+1][x-1] = output->dados[i][y+1][x-1] +  quant_erro[i] * 3.0 / 16.0;
+                    output->dados[i][y+1][x] = output->dados[i][y+1][x] +  quant_erro[i] * 5.0 / 16.0;
+                    output->dados[i][y+1][x+1] = output->dados[i][y+1][x+1] +  quant_erro[i] / 16.0;
+                }
             }
         }
     }
-    
     return output;
 }
 void salvaPallete(Pallete* pallete, char* arquivo){
